@@ -14,7 +14,6 @@ from pathlib import Path
 import numpy as np
 from scipy.linalg import expm
 
-
 PARAMETER_NAMES = (
     "activation_rate_scale",
     "deactivation_rate_scale",
@@ -50,10 +49,15 @@ def validate_protocol(data: dict, protocol: dict) -> list[tuple[float, float]]:
     duration_grid = {float(v) for v in data["protocol_constraints"]["duration_grid_ms"]}
     segments: list[tuple[float, float]] = []
     for index, segment in enumerate(raw):
-        if not isinstance(segment, dict) or set(segment) != {"voltage_mv", "duration_ms"}:
+        if not isinstance(segment, dict) or set(segment) != {
+            "voltage_mv",
+            "duration_ms",
+        }:
             raise ValueError(f"segment {index} has the wrong keys")
         voltage = _strict_number(segment["voltage_mv"], f"segment {index} voltage_mv")
-        duration = _strict_number(segment["duration_ms"], f"segment {index} duration_ms")
+        duration = _strict_number(
+            segment["duration_ms"], f"segment {index} duration_ms"
+        )
         if voltage not in voltage_grid:
             raise ValueError(f"segment {index} voltage is off-grid")
         if duration not in duration_grid:
@@ -79,13 +83,25 @@ def validate_protocol(data: dict, protocol: dict) -> list[tuple[float, float]]:
     return segments
 
 
-def _rates(voltage_mv: float, variant: dict, log_scales: np.ndarray) -> tuple[float, ...]:
+def _rates(
+    voltage_mv: float, variant: dict, log_scales: np.ndarray
+) -> tuple[float, ...]:
     scale = np.exp(log_scales[:4])
     shift = float(variant["voltage_shift_mv"])
     voltage = voltage_mv - shift
     multipliers = variant["rate_multipliers"]
-    alpha = 0.010 * math.exp((voltage + 45.0) / 38.0) * float(multipliers["activation"]) * scale[0]
-    beta = 0.028 * math.exp(-(voltage + 45.0) / 44.0) * float(multipliers["deactivation"]) * scale[1]
+    alpha = (
+        0.010
+        * math.exp((voltage + 45.0) / 38.0)
+        * float(multipliers["activation"])
+        * scale[0]
+    )
+    beta = (
+        0.028
+        * math.exp(-(voltage + 45.0) / 44.0)
+        * float(multipliers["deactivation"])
+        * scale[1]
+    )
     inactivation = (
         0.020
         / (1.0 + math.exp(-(voltage + 18.0) / 13.0))
@@ -114,7 +130,9 @@ def _generator(voltage_mv: float, variant: dict, log_scales: np.ndarray) -> np.n
     )
 
 
-def _equilibrium(voltage_mv: float, variant: dict, log_scales: np.ndarray) -> np.ndarray:
+def _equilibrium(
+    voltage_mv: float, variant: dict, log_scales: np.ndarray
+) -> np.ndarray:
     q = _generator(voltage_mv, variant, log_scales)
     system = q.copy()
     system[-1, :] = 1.0
@@ -124,15 +142,21 @@ def _equilibrium(voltage_mv: float, variant: dict, log_scales: np.ndarray) -> np
     return state / state.sum()
 
 
-def simulate_currents(data: dict, segments: list[tuple[float, float]], variant: dict,
-                      log_scales: np.ndarray) -> np.ndarray:
+def simulate_currents(
+    data: dict,
+    segments: list[tuple[float, float]],
+    variant: dict,
+    log_scales: np.ndarray,
+) -> np.ndarray:
     sample_interval = float(data["apparatus"]["sample_interval_ms"])
-    state = _equilibrium(float(data["apparatus"]["initial_hold_mv"]), variant, log_scales)
+    state = _equilibrium(
+        float(data["apparatus"]["initial_hold_mv"]), variant, log_scales
+    )
     currents: list[float] = []
     conductance = float(variant["conductance_ns"]) * math.exp(float(log_scales[4]))
     reversal = float(data["apparatus"]["reversal_potential_mv"])
     for voltage, duration in segments:
-        steps = int(round(duration / sample_interval))
+        steps = round(duration / sample_interval)
         if abs(steps * sample_interval - duration) > 1e-9 or steps < 1:
             raise ValueError("duration is incompatible with the sample interval")
         transition = expm(_generator(voltage, variant, log_scales) * sample_interval)
@@ -144,7 +168,9 @@ def simulate_currents(data: dict, segments: list[tuple[float, float]], variant: 
     return np.asarray(currents, dtype=float)
 
 
-def _variant_metrics(data: dict, segments: list[tuple[float, float]], variant: dict) -> dict:
+def _variant_metrics(
+    data: dict, segments: list[tuple[float, float]], variant: dict
+) -> dict:
     delta = float(data["information_model"]["finite_difference_log_step"])
     nominal = simulate_currents(data, segments, variant, np.zeros(5))
     columns = []
@@ -154,12 +180,18 @@ def _variant_metrics(data: dict, segments: list[tuple[float, float]], variant: d
         plus[index] = delta
         minus[index] = -delta
         columns.append(
-            (simulate_currents(data, segments, variant, plus)
-             - simulate_currents(data, segments, variant, minus)) / (2.0 * delta)
+            (
+                simulate_currents(data, segments, variant, plus)
+                - simulate_currents(data, segments, variant, minus)
+            )
+            / (2.0 * delta)
         )
     jacobian = np.column_stack(columns)
     noise = data["apparatus"]["noise_model"]
-    sigma = np.sqrt(float(noise["baseline_pA"]) ** 2 + float(noise["current_factor_pA"]) * np.abs(nominal))
+    sigma = np.sqrt(
+        float(noise["baseline_pA"]) ** 2
+        + float(noise["current_factor_pA"]) * np.abs(nominal)
+    )
     weighted = jacobian / sigma[:, None]
     fisher = weighted.T @ weighted
     eigenvalues = np.linalg.eigvalsh(fisher)
@@ -176,15 +208,17 @@ def _variant_metrics(data: dict, segments: list[tuple[float, float]], variant: d
         "minimum_eigenvalue": float(eigenvalues[0]),
         "maximum_five_sigma_current_pa": float(excursions.max()),
         "saturation_sample_count": saturation_count,
-        "terminal_open_probability": float(
-            _terminal_state(data, segments, variant)[1]
-        ),
+        "terminal_open_probability": float(_terminal_state(data, segments, variant)[1]),
     }
 
 
-def _terminal_state(data: dict, segments: list[tuple[float, float]], variant: dict) -> np.ndarray:
-    state = _equilibrium(float(data["apparatus"]["initial_hold_mv"]), variant, np.zeros(5))
-    sample_interval = float(data["apparatus"]["sample_interval_ms"])
+def _terminal_state(
+    data: dict, segments: list[tuple[float, float]], variant: dict
+) -> np.ndarray:
+    state = _equilibrium(
+        float(data["apparatus"]["initial_hold_mv"]), variant, np.zeros(5)
+    )
+    float(data["apparatus"]["sample_interval_ms"])
     for voltage, duration in segments:
         state = expm(_generator(voltage, variant, np.zeros(5)) * duration) @ state
     state = np.maximum(state, 0.0)
@@ -193,18 +227,30 @@ def _terminal_state(data: dict, segments: list[tuple[float, float]], variant: di
 
 def evaluate(data: dict, protocol: dict) -> dict:
     segments = validate_protocol(data, protocol)
-    per_variant = [_variant_metrics(data, segments, variant) for variant in data["cell_variants"]]
-    weights = np.asarray([float(v["design_weight"]) for v in data["cell_variants"]], dtype=float)
+    per_variant = [
+        _variant_metrics(data, segments, variant) for variant in data["cell_variants"]
+    ]
+    weights = np.asarray(
+        [float(v["design_weight"]) for v in data["cell_variants"]], dtype=float
+    )
     logdets = np.asarray([v["log_determinant"] for v in per_variant])
     eigmins = np.asarray([v["minimum_eigenvalue"] for v in per_variant])
     return {
         "protocol_legal": True,
         "minimum_log_determinant": float(logdets.min()),
         "minimum_eigenvalue": float(eigmins.min()),
-        "weighted_mean_log_determinant": float(np.dot(weights, logdets) / weights.sum()),
-        "saturation_sample_count": int(sum(v["saturation_sample_count"] for v in per_variant)),
-        "maximum_five_sigma_current_pa": float(max(v["maximum_five_sigma_current_pa"] for v in per_variant)),
-        "maximum_terminal_open_probability": float(max(v["terminal_open_probability"] for v in per_variant)),
+        "weighted_mean_log_determinant": float(
+            np.dot(weights, logdets) / weights.sum()
+        ),
+        "saturation_sample_count": int(
+            sum(v["saturation_sample_count"] for v in per_variant)
+        ),
+        "maximum_five_sigma_current_pa": float(
+            max(v["maximum_five_sigma_current_pa"] for v in per_variant)
+        ),
+        "maximum_terminal_open_probability": float(
+            max(v["terminal_open_probability"] for v in per_variant)
+        ),
         "variant_metrics": per_variant,
     }
 
@@ -216,9 +262,13 @@ def objective(data: dict, protocol: dict) -> float:
         return -1.0e12
     penalty = 0.0
     penalty += 1000.0 * metrics["saturation_sample_count"]
-    terminal_limit = float(data["protocol_constraints"]["maximum_terminal_open_probability"])
+    terminal_limit = float(
+        data["protocol_constraints"]["maximum_terminal_open_probability"]
+    )
     if metrics["maximum_terminal_open_probability"] > terminal_limit:
-        penalty += 100000.0 * (metrics["maximum_terminal_open_probability"] - terminal_limit)
+        penalty += 100000.0 * (
+            metrics["maximum_terminal_open_probability"] - terminal_limit
+        )
     return (
         metrics["minimum_log_determinant"]
         + 2.0 * math.log(max(metrics["minimum_eigenvalue"], 1e-16))

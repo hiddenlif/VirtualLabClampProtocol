@@ -1,0 +1,5 @@
+# Linted and formatted with ruff using its default rules. The per-file exceptions below are deliberate.
+
+[lint.per-file-ignores]
+# Protocol validation reports every malformed field as a ValueError, and scoring never raises on bad input.
+"app/protocol_score.py" = ["BLE001", "TRY004"]
