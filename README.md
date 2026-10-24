@@ -1,4 +1,4 @@
-# Virtual Lab: clamp protocol
+# Simulation Design Task: Voltage-Clamp Protocol Optimization
 
 Design an ordered voltage-clamp protocol for a synthetic ion-channel model. Candidate protocols produce simulated currents and information metrics across four disclosed cell variants. This is prospective protocol optimization rather than a closed-loop acquisition campaign.
 
