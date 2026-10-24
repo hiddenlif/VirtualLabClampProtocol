@@ -26,9 +26,7 @@ The public evaluator reports scientific metrics. Final acceptance thresholds and
 
 ## Execution evidence
 
-A historical clean-extraction container run passed all five reference checks. A no-op and two legal negative controls scored zero. These are local reference results, not blind solver results or platform approval.
-
-The historical evidence concerns the source version. This publication separates public inputs from private evaluation material and cleans documentation. No new task execution or model trial was performed for this publication, and the cleaned repository has not been revalidated end to end.
+On 2026-10-24 this published repository was run end to end: with the private reference installed in `app/`, the protocol written by the private reference optimizer in the task image passed all five grader checks (reward 1); the unchanged starter, with no protocol, scored 0. A historical clean-extraction run of the source version also passed. These are local reference results in Docker, not blind solver results or platform approval.
 
 ## Reference and verifier
 
