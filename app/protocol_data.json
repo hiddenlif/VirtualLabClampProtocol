@@ -1,0 +1,122 @@
+{
+  "apparatus": {
+    "amplifier_limit_pa": 1725,
+    "initial_hold_mv": -80,
+    "noise_model": {
+      "baseline_pA": 7.5,
+      "current_factor_pA": 0.11
+    },
+    "reversal_potential_mv": 55,
+    "sample_interval_ms": 20,
+    "saturation_sigma_multiplier": 5
+  },
+  "cell_variants": [
+    {
+      "conductance_ns": 29.0,
+      "design_weight": 1.0,
+      "id": "cell-A",
+      "rate_multipliers": {
+        "activation": 0.78,
+        "deactivation": 1.18,
+        "inactivation": 0.83,
+        "recovery": 1.24
+      },
+      "voltage_shift_mv": -4.0
+    },
+    {
+      "conductance_ns": 34.0,
+      "design_weight": 1.2,
+      "id": "cell-B",
+      "rate_multipliers": {
+        "activation": 1.22,
+        "deactivation": 0.82,
+        "inactivation": 1.18,
+        "recovery": 0.79
+      },
+      "voltage_shift_mv": 5.0
+    },
+    {
+      "conductance_ns": 31.0,
+      "design_weight": 1.1,
+      "id": "cell-C",
+      "rate_multipliers": {
+        "activation": 0.92,
+        "deactivation": 1.09,
+        "inactivation": 1.31,
+        "recovery": 0.91
+      },
+      "voltage_shift_mv": 1.0
+    },
+    {
+      "conductance_ns": 37.0,
+      "design_weight": 0.9,
+      "id": "cell-D",
+      "rate_multipliers": {
+        "activation": 1.08,
+        "deactivation": 0.91,
+        "inactivation": 0.72,
+        "recovery": 1.13
+      },
+      "voltage_shift_mv": -2.0
+    }
+  ],
+  "disclosure": "All currents and cell variants are disclosed synthetic measurements generated for this candidate. They do not describe a clinical or validated wet-lab assay.",
+  "information_model": {
+    "definition": "For each cell variant, central differences of every sampled current with respect to the five disclosed log-parameters form J. With sigma_k^2 = baseline_pA^2 + current_factor_pA*abs(I_k), F = sum_k J_k^T J_k/sigma_k^2.",
+    "finite_difference_log_step": 0.0002,
+    "reporting_eigenvalue_floor": 1e-12
+  },
+  "protocol_constraints": {
+    "duration_grid_ms": [
+      40,
+      80,
+      120
+    ],
+    "maximum_terminal_open_probability": 0.04,
+    "required_regions": {
+      "activation_minimum_mv": 0,
+      "mid_voltage_inclusive_mv": [
+        -60,
+        -20
+      ],
+      "recovery_maximum_mv": -80
+    },
+    "segment_count": 10,
+    "terminal_hold": {
+      "minimum_duration_ms": 80,
+      "voltage_mv": -80
+    },
+    "total_duration_ms": 800,
+    "voltage_grid_mv": [
+      -100,
+      -80,
+      -60,
+      -40,
+      -20,
+      0,
+      20,
+      40
+    ]
+  },
+  "schema_version": "1.0",
+  "state_model": {
+    "parameter_names": [
+      "activation_rate_scale",
+      "deactivation_rate_scale",
+      "inactivation_rate_scale",
+      "recovery_rate_scale",
+      "conductance_scale"
+    ],
+    "states": [
+      "closed",
+      "open",
+      "inactivated"
+    ],
+    "transitions": [
+      "closed_to_open",
+      "open_to_closed",
+      "open_to_inactivated",
+      "inactivated_to_closed"
+    ]
+  }
+}
